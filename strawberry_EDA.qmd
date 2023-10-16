@@ -23,11 +23,58 @@ library(stringr)
 ```
 
 ```{r warning=FALSE, message=FALSE}
-strawberry <- read.csv("C:/Users/SamXi/OneDrive/Desktop/MA 615/strawberry_oct4.csv", header = TRUE)
+strawberry <- read_csv("strawberry.csv", col_names = TRUE)
 
 glimpse(strawberry)
 ```
+```{r}
+drop_one_value_col <- function(df){
+col_name <- NULL
+col_val <- NULL
+suppressWarnings({
+for(i in 1:dim(df)[2]){
+if((df |> distinct(df[,i]) |> count()) == 1){
+  col_name = c(col_name, colnames(df[i]))
+  col_val = c(col_val, df[1,i])  
+} }
+})
 
+if(is.null(col_name)){return("No Columns to drop")}else{
+   col_val = unlist(col_val)
+   attributes(col_val) = NULL
+   drp = data.frame(col_name, col_val)
+   return(drp)
+   }
+}
+
+str <- drop_one_value_col(strawberry)
+
+# str |> kable(caption = "Dropped Single-Value Columns: names and values")
+
+str <- str$col_name
+
+strawberry <- strawberry |> select(!all_of(str))
+
+
+
+## applying the function a second time 
+## tests the function when there aren't any 
+## one-value columns
+#####  drop_one_value_col(strawberry)
+
+```
+
+<!-- Glimpse of strawberry data after dropping single-value columns. -->
+
+```{r}
+#| label: glimpse of strawberry data
+#| echo: false
+
+## glimpse(strawberry)
+
+```
+
+##Remove (D) and (H) as NA
 ```{r}
 strawberry$Value<-na_if(strawberry$Value,"(D)")
 strawberry$Value<-as.numeric(gsub(",","",strawberry$Value))
@@ -35,9 +82,34 @@ strawberry$CV....<-na_if(strawberry$CV....,"(D)")
 strawberry$CV....<-na_if(strawberry$CV....,"(H)")
 strawberry$CV....<-as.numeric(gsub(",","",strawberry$CV....))
 
-state_all <- strawberry |> group_by(State) |> count()
+```
 
+
+```{r}
+state_all <- strawberry |> group_by(State) |> count()
 if(sum(state_all$n) == dim(strawberry)[1]){
   print("Every row has value in the State column.")
-  }
+}
+state_max <- state_all$State[which(state_all$n ==  max(state_all$n)  )]
+```
+```{r}
+calif_census <- strawberry |> filter((State=="CALIFORNIA") & (Program=="CENSUS"))
+
+
+## ## filter rows of California data from the SURVEY data
+calif_survey <- strawberry |> filter((State=="CALIFORNIA") & (Program=="SURVEY"))
+
+census_col <- colnames(calif_census)
+
+survey_col <- colnames(calif_survey)
+
+strwb_census <- strawberry |> filter(Program == "CENSUS")
+
+strwb_survey <- strawberry |> filter(Program == "SURVEY")
+
+rm(calif_census, calif_survey, state_all)
+```
+
+```{r}
+
 ```
