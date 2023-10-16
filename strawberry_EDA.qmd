@@ -1,0 +1,43 @@
+---
+title: "Strawberry EDA"
+author: "Chenghao XIa"
+date: 2023 Oct 16
+format: html
+engine: knir 
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library(knitr)  
+library(kableExtra)
+library(tidyverse)
+library(stringr)
+```
+
+```{r warning=FALSE, message=FALSE}
+strawberry <- read.csv("C:/Users/SamXi/OneDrive/Desktop/MA 615/strawberry_oct4.csv", header = TRUE)
+
+glimpse(strawberry)
+```
+
+```{r}
+strawberry$Value<-na_if(strawberry$Value,"(D)")
+strawberry$Value<-as.numeric(gsub(",","",strawberry$Value))
+strawberry$CV....<-na_if(strawberry$CV....,"(D)")
+strawberry$CV....<-na_if(strawberry$CV....,"(H)")
+strawberry$CV....<-as.numeric(gsub(",","",strawberry$CV....))
+
+state_all <- strawberry |> group_by(State) |> count()
+
+if(sum(state_all$n) == dim(strawberry)[1]){
+  print("Every row has value in the State column.")
+  }
+```
