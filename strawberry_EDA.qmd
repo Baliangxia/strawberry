@@ -60,7 +60,7 @@ strawberry <- strawberry |> select(!all_of(str))
 ## applying the function a second time 
 ## tests the function when there aren't any 
 ## one-value columns
-#####  drop_one_value_col(strawberry)
+  drop_one_value_col(strawberry)
 
 ```
 
@@ -76,11 +76,11 @@ strawberry <- strawberry |> select(!all_of(str))
 
 ##Remove (D) and (H) as NA
 ```{r}
-strawberry$Value<-na_if(strawberry$Value,"(D)")
-strawberry$Value<-as.numeric(gsub(",","",strawberry$Value))
-strawberry$CV....<-na_if(strawberry$CV....,"(D)")
-strawberry$CV....<-na_if(strawberry$CV....,"(H)")
-strawberry$CV....<-as.numeric(gsub(",","",strawberry$CV....))
+#strawberry$Value<-na_if(strawberry$Value,"(D)")
+#strawberry$Value<-as.numeric(gsub(",","",strawberry$Value))
+#strawberry$CV....<-na_if(strawberry$CV....,"(D)")
+#strawberry$CV....<-na_if(strawberry$CV....,"(H)")
+#strawberry$CV....<-as.numeric(gsub(",","",strawberry$CV....))
 
 ```
 
@@ -92,6 +92,7 @@ if(sum(state_all$n) == dim(strawberry)[1]){
 }
 state_max <- state_all$State[which(state_all$n ==  max(state_all$n)  )]
 ```
+##split strawberry into census and survey
 ```{r}
 calif_census <- strawberry |> filter((State=="CALIFORNIA") & (Program=="CENSUS"))
 
