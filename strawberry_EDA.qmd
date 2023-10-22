@@ -3,12 +3,14 @@ title: "Strawberry EDA"
 author: "Chenghao XIa"
 date: 2023 Oct 22
 format: html
-engine: knir 
-editor: visual
+engine: knir
 ---
-## Running Code
 
 ```{r}
+#| warning: false
+#| message: false
+#| echo: false
+
 library(knitr)  
 library(kableExtra)
 library(tidyverse)
@@ -16,12 +18,18 @@ library(stringr)
 ```
 
 ```{r warning=FALSE, message=FALSE}
+#| warning: false
+#| message: false
+#| echo: false
+
 strawberry <- read_csv("strawberry.csv", col_names = TRUE)
 
-glimpse(strawberry)
+#glimpse(strawberry)
 ```
 
 ```{r}
+#| echo: false
+
 drop_one_value_col <- function(df){
 col_name <- NULL
 col_val <- NULL
@@ -49,12 +57,7 @@ str <- str$col_name
 
 strawberry <- strawberry |> select(!all_of(str))
 
-
-
-## applying the function a second time 
-## tests the function when there aren't any 
-## one-value columns
-  drop_one_value_col(strawberry)
+#drop_one_value_col(strawberry)
 
 ```
 
@@ -64,32 +67,23 @@ strawberry <- strawberry |> select(!all_of(str))
 #| label: glimpse of strawberry data
 #| echo: false
 
-glimpse(strawberry)
-
-```
-
-##Remove (D) and (H) as NA
-
-```{r}
-#strawberry$Value<-na_if(strawberry$Value,"(D)")
-#strawberry$Value<-as.numeric(gsub(",","",strawberry$Value))
-#strawberry$CV....<-na_if(strawberry$CV....,"(D)")
-#strawberry$CV....<-na_if(strawberry$CV....,"(H)")
-#strawberry$CV....<-as.numeric(gsub(",","",strawberry$CV....))
+#glimpse(strawberry)
 
 ```
 
 ```{r}
+#| echo: false
+
 state_all <- strawberry |> group_by(State) |> count()
-if(sum(state_all$n) == dim(strawberry)[1]){
-  print("Every row has value in the State column.")
-}
+#if(sum(state_all$n) == dim(strawberry)[1]){
+#  print("Every row has value in the State column.")
+#}
 state_max <- state_all$State[which(state_all$n ==  max(state_all$n)  )]
 ```
 
-##split strawberry into census and survey
-
 ```{r}
+#| echo: false
+
 calif_census <- strawberry |> filter((State=="CALIFORNIA") & (Program=="CENSUS"))
 
 
@@ -108,6 +102,8 @@ rm(calif_census, calif_survey, state_all)
 ```
 
 ```{r}
+#| echo: false
+
 strwb_census <- strwb_census |>
   separate_wider_delim(  cols = `Data Item`,
                          delim = ",",
@@ -140,6 +136,9 @@ a <- strwb_census |> distinct(temp2)
 ```
 
 ```{r}
+#| echo: false
+#| eval: true
+
 strwb_census <- strwb_census |> mutate(`Fresh Market` = temp2, .after = temp2)
 
 ## Remove cells in `Fresh Market` column 
@@ -162,8 +161,6 @@ strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace("^FRES
 
 
 ```
-
-
 
 ```{r}
 #| label: make process market column
@@ -194,6 +191,8 @@ strwb_census$temp3[is.na(strwb_census$temp3)] <- ""
 ```
 
 ```{r}
+#| echo: false
+
 strwb_census <- strwb_census |> unite(temp2, temp3, col="Metric", sep="")
 
 ## Now fix the entries in the Metric column
@@ -207,10 +206,15 @@ strwb_census <- strwb_census |> relocate(`Process Market`, .before = Metric)
 
 strwb_census <- strwb_census |> rename(Totals = prop_acct)
 
-drop_one_value_col(strwb_census)
+#drop_one_value_col(strwb_census)
 ```
 
 ```{r}
+#| echo: false
+#| warning: false
+#| message: false
+#| eval: true
+
 vals <- strwb_census$Value
 g1 <- sub(",", "", vals)
 g2 <- gsub(",", "", vals)
@@ -240,6 +244,9 @@ v_trns <- dcomma(v)
 ```
 
 ```{r}
+#| echo: false
+#| eval: false
+
 plot1_data <- strawberry |> 
   select(c(Year, State, `Data Item`, Value)) |> 
   filter((Year == 2021) & (`Data Item` == "STRAWBERRIES, ORGANIC - OPERATIONS WITH SALES"))
@@ -248,7 +255,7 @@ plot1_data$Value <- as.numeric(plot1_data$Value)
 
 plot1_data <- plot1_data |> arrange(desc(Value))
 
-ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
+plot1<- ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
   geom_bar(stat = "identity") + 
   theme(axis.text.x=element_text(angle=45,hjust=1)) +
   labs(x = "States", y = "Count",
@@ -256,6 +263,9 @@ title ="Number of Organic Strawberry operations with Sales in 2021")
 ```
 
 ```{r}
+#| echo: false
+#| eval: false
+
 plot2_data <- strawberry |> 
   select(c(Year, State, `Data Item`, Value)) |> 
   filter((Year == 2021) &
@@ -267,7 +277,7 @@ plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
 
 plot2_data <- plot1_data |> arrange(desc(Value))
 
-ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
+plot2<-ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
   geom_bar(stat = "identity") + 
   theme(axis.text.x=element_text(angle=45,hjust=1)) +
   labs(x = "States", y = "Sales",
@@ -276,6 +286,8 @@ title ="Organic Strawberry Sales ($) in 2021")
 ```
 
 ```{r}
+#| echo: false
+
 per_c <- strwb_survey |> select(Period) |> distinct()
 per_c <- unlist(per_c)
 
@@ -303,6 +315,9 @@ a <- strwb_survey |> distinct(temp1a)
 ```
 
 ```{r}
+#| echo: false
+#| eval: true
+
 strwb_survey <- strwb_survey |>
   separate_wider_delim(  cols = Domain,
                          delim = ",",
@@ -332,7 +347,7 @@ strwb_survey_chem <- strwb_survey |> filter((temp22 == "CHEMICAL") | (temp42 == 
 
 strwb_survey_mkt <- strwb_survey |> filter(!((temp22 == "CHEMICAL") | (temp42 == "CHEMICAL")))
 chem1 <-  drop_one_value_col(strwb_survey_chem)
-chem1 |> kable(caption = "1-value columns dropped")
+#chem1 |> kable(caption = "1-value columns dropped")
 
 chem1 <- setdiff(colnames(strwb_survey_chem), chem1$col_name)
 
@@ -341,11 +356,73 @@ strwb_survey_chem <- strwb_survey_chem |> select(all_of(chem1))
 ```
 
 ```{r}
+#| echo: false
+#| eval: true
 mkt1 <- drop_one_value_col(strwb_survey_mkt)
 
- mkt1 |> kable(caption = "droping 1-value cols - mkt")
+#mkt1 |> kable(caption = "droping 1-value cols - mkt")
 
 mkt1 <- setdiff(colnames(strwb_survey_mkt), mkt1$col_name)
 
 strwb_survey_mkt <- strwb_survey_mkt |> select(all_of(mkt1))
 ```
+#EDA
+We assume organic straberry would have a higher price than common strawberry. 
+First, we look at the distribution of states with organic stawberries.
+```{r}
+strawberry %>%
+ filter(Domain == "ORGANIC STATUS") %>%
+ ggplot() +
+  aes(x = State, colour = Program) +
+  geom_bar(fill = "skyblue") +
+  scale_color_hue(direction = 1) +
+  theme_minimal()+
+  labs(x = "States", y = "Counts",
+title ="Organic Status within Program")
+```
+And now we find the program for organic strawberry only works with census.
+Then we look at which states has the highest value of organic 
+
+```{r} 
+plot2_data <- strawberry |> 
+  select(c(Year, State, Domain, Value)) |> 
+  filter((Domain == "ORGANIC STATUS")&
+           (Value != "(D)")&
+         (Value != "(NA)")&
+         (Value != "(Z)"))
+
+
+plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
+
+plot2_data <- plot2_data |> arrange(desc(Value))
+
+plot2<-ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(x = "States", y = "Value",
+title ="Organic Status Distribution with States")
+
+plot2
+```
+And we find California has a pretty high value than all other countries. But we are not sure if California has all values higher than other states.
+```{r}
+plot3_data <- strawberry |> 
+  select(c(Year, State, Domain, Value)) |> 
+  filter((Value != "(D)")&
+         (Value != "(NA)")&
+         (Value != "(Z)"))
+
+
+plot3_data$Value <- as.numeric(gsub(",", "", plot3_data$Value))
+
+plot3_data <- plot3_data |> arrange(desc(Value))
+
+plot2<-ggplot(plot3_data, aes(x=reorder(State, -Value), y=Value)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(x = "States", y = "Value",
+title ="Value in different State")
+
+plot2
+```
+We can not conclude that California has a high value on Organic strawberry because it has have value in all Domain. 
