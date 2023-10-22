@@ -1,19 +1,12 @@
 ---
 title: "Strawberry EDA"
 author: "Chenghao XIa"
-date: 2023 Oct 16
+date: 2023 Oct 22
 format: html
 engine: knir 
 editor: visual
 ---
-
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
 ## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
 
 ```{r}
 library(knitr)  
@@ -27,6 +20,7 @@ strawberry <- read_csv("strawberry.csv", col_names = TRUE)
 
 glimpse(strawberry)
 ```
+
 ```{r}
 drop_one_value_col <- function(df){
 col_name <- NULL
@@ -70,11 +64,12 @@ strawberry <- strawberry |> select(!all_of(str))
 #| label: glimpse of strawberry data
 #| echo: false
 
-## glimpse(strawberry)
+glimpse(strawberry)
 
 ```
 
 ##Remove (D) and (H) as NA
+
 ```{r}
 #strawberry$Value<-na_if(strawberry$Value,"(D)")
 #strawberry$Value<-as.numeric(gsub(",","",strawberry$Value))
@@ -84,7 +79,6 @@ strawberry <- strawberry |> select(!all_of(str))
 
 ```
 
-
 ```{r}
 state_all <- strawberry |> group_by(State) |> count()
 if(sum(state_all$n) == dim(strawberry)[1]){
@@ -92,7 +86,9 @@ if(sum(state_all$n) == dim(strawberry)[1]){
 }
 state_max <- state_all$State[which(state_all$n ==  max(state_all$n)  )]
 ```
+
 ##split strawberry into census and survey
+
 ```{r}
 calif_census <- strawberry |> filter((State=="CALIFORNIA") & (Program=="CENSUS"))
 
@@ -112,5 +108,244 @@ rm(calif_census, calif_survey, state_all)
 ```
 
 ```{r}
+strwb_census <- strwb_census |>
+  separate_wider_delim(  cols = `Data Item`,
+                         delim = ",",
+                         names = c("Fruit",
+                                 "temp1",
+                                 "temp2",
+                                 "temp3"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+a <- strwb_census |> distinct(Fruit)
+a <- strwb_census |> distinct(temp1)
+strwb_census <- strwb_census |>
+  separate_wider_delim(  cols = temp1,
+                         delim = " - ",
+                         names = c("crop_type",
+                                 "prop_acct"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+a <- strwb_census |> distinct(crop_type)
+a <- strwb_census |> distinct(prop_acct)
+strwb_census$crop_type <- str_trim(strwb_census$crop_type, side = "both")
 
+strwb_census$temp2 <- str_trim(strwb_census$temp2, side = "both")
+
+strwb_census$temp3 <- str_trim(strwb_census$temp3, side = "both")
+
+a <- strwb_census |> distinct(temp2)
+```
+
+```{r}
+strwb_census <- strwb_census |> mutate(`Fresh Market` = temp2, .after = temp2)
+
+## Remove cells in `Fresh Market` column 
+##   that begin "MEASURED"
+strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace( "^MEA.*", "")
+
+## Remove cells in `Fresh Market` column 
+##   that begin "PROCESSING" 
+strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace( "^P.*", "")
+
+## substitute a space for NA in `Fresh Market` column
+strwb_census$`Fresh Market`[is.na(strwb_census$`Fresh Market`)] <- ""  
+
+## in temp2 column, remove cells that begin "FRESH"
+ strwb_census$temp2 <- strwb_census$temp2 |> str_replace("^F.*", "")
+
+## Now fix the entries in the `Fresh Market` column
+##   Remove "FRESH MARKET - " from the cells
+strwb_census$`Fresh Market` <- strwb_census$`Fresh Market` |> str_replace("^FRESH MARKET - ", "")
+
+
+```
+
+
+
+```{r}
+#| label: make process market column
+#| echo: false
+
+## Make a copy of temp2 named `Process Market`
+strwb_census <- strwb_census |> mutate(`Process Market` = temp2, .after = temp2)
+
+## remove `Process Market` cells beginning "MEASURED"
+strwb_census$`Process Market` <-  strwb_census$`Process Market` |> str_replace("^MEA.*", "")
+
+## substitute space for NA in `Process Market` column
+strwb_census$`Process Market`[is.na(strwb_census$`Process Market`)] <- ""
+
+## In temp2, remove cells that begin "PROCESSING"
+strwb_census$temp2 <- strwb_census$temp2 |> str_replace("^P.*", "")
+
+## In `Processing Market`, remove "PROCESSING - " from cells
+strwb_census$`Process Market` <-  strwb_census$`Process Market` |> str_replace("PROCESSING - ", "") 
+
+strwb_census$prop_acct[is.na(strwb_census$prop_acct)] <- "" 
+
+## substitute a space for NA in temp2 column
+strwb_census$temp2[is.na(strwb_census$temp2)] <- "" 
+
+## substitute a space for NA in temp2 column
+strwb_census$temp3[is.na(strwb_census$temp3)] <- "" 
+```
+
+```{r}
+strwb_census <- strwb_census |> unite(temp2, temp3, col="Metric", sep="")
+
+## Now fix the entries in the Metric column
+##   Remove "MEASURED IN " from the cells
+strwb_census$Metric <- strwb_census$Metric |> str_replace("MEASURED IN ", "")
+
+## move Metric to the end
+strwb_census <- strwb_census |> relocate(Metric, .before = Domain)
+
+strwb_census <- strwb_census |> relocate(`Process Market`, .before = Metric)
+
+strwb_census <- strwb_census |> rename(Totals = prop_acct)
+
+drop_one_value_col(strwb_census)
+```
+
+```{r}
+vals <- strwb_census$Value
+g1 <- sub(",", "", vals)
+g2 <- gsub(",", "", vals)
+a <- vals |> str_detect(",")
+b <- vals |> str_replace(",", "")
+c <- vals |> str_replace_all(",", "")
+c <- as.numeric(c)
+dcomma <- function(c){
+  x_new <- as.numeric(gsub(",", "", c))
+  return(x_new)
+}
+v <- strwb_census$Value
+fn_i <- v |> str_detect("^\\([:upper:]\\)$") ## returns
+v1 <- dcomma(v)
+na_i <- is.na(v1)
+dcomma <- function(c){
+  suppressWarnings({
+  xnew = as.numeric(gsub(",", "", c))
+  fns = unique(c[is.na(xnew)])
+  vtran = list("new_vec" = xnew, "footnotes" = fns)
+  return(vtran)
+  })
+}
+v_trns <- dcomma(v)
+ a <- v_trns$new_vec
+ 
+```
+
+```{r}
+plot1_data <- strawberry |> 
+  select(c(Year, State, `Data Item`, Value)) |> 
+  filter((Year == 2021) & (`Data Item` == "STRAWBERRIES, ORGANIC - OPERATIONS WITH SALES"))
+
+plot1_data$Value <- as.numeric(plot1_data$Value)
+
+plot1_data <- plot1_data |> arrange(desc(Value))
+
+ggplot(plot1_data, aes(x=reorder(State, -Value), y=Value)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(x = "States", y = "Count",
+title ="Number of Organic Strawberry operations with Sales in 2021")
+```
+
+```{r}
+plot2_data <- strawberry |> 
+  select(c(Year, State, `Data Item`, Value)) |> 
+  filter((Year == 2021) &
+           (`Data Item` == "STRAWBERRIES, ORGANIC - SALES, MEASURED IN $") & 
+           (Value != "(D)"))
+
+
+plot2_data$Value <- as.numeric(gsub(",", "", plot2_data$Value))
+
+plot2_data <- plot1_data |> arrange(desc(Value))
+
+ggplot(plot2_data, aes(x=reorder(State, -Value), y=Value)) + 
+  geom_bar(stat = "identity") + 
+  theme(axis.text.x=element_text(angle=45,hjust=1)) +
+  labs(x = "States", y = "Sales",
+title ="Organic Strawberry Sales ($) in 2021")
+
+```
+
+```{r}
+per_c <- strwb_survey |> select(Period) |> distinct()
+per_c <- unlist(per_c)
+
+strwb_survey <- strwb_survey |> 
+  separate_wider_delim(  cols = `Data Item`,
+                         delim = ",",
+                         names = c("temp1",
+                                 "temp2",
+                                 "temp3",
+                                 "temp4"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+strwb_survey <- strwb_survey |>
+  separate_wider_delim(  cols = temp1,
+                         delim = " - ",
+                         names = c("temp1a",
+                                 "temp1b"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+a <- strwb_survey |> distinct(temp1a)
+
+```
+
+```{r}
+strwb_survey <- strwb_survey |>
+  separate_wider_delim(  cols = Domain,
+                         delim = ",",
+                         names = c("temp22",
+                                 "temp23"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+
+t22 <- unique(strwb_survey$temp22)
+
+t23 <- unique(strwb_survey$temp23)
+
+strwb_survey <- strwb_survey |>
+  separate_wider_delim(  cols = `Domain Category`,
+                         delim = ",",
+                         names = c("temp42",
+                                 "temp43",
+                                 "temp44",
+                                 "temp45"),
+                         too_many = "error",
+                         too_few = "align_start"
+                       )
+
+strwb_survey_chem <- strwb_survey |> filter((temp22 == "CHEMICAL") | (temp42 == "CHEMICAL"))
+
+strwb_survey_mkt <- strwb_survey |> filter(!((temp22 == "CHEMICAL") | (temp42 == "CHEMICAL")))
+chem1 <-  drop_one_value_col(strwb_survey_chem)
+chem1 |> kable(caption = "1-value columns dropped")
+
+chem1 <- setdiff(colnames(strwb_survey_chem), chem1$col_name)
+
+strwb_survey_chem <- strwb_survey_chem |> select(all_of(chem1))
+
+```
+
+```{r}
+mkt1 <- drop_one_value_col(strwb_survey_mkt)
+
+ mkt1 |> kable(caption = "droping 1-value cols - mkt")
+
+mkt1 <- setdiff(colnames(strwb_survey_mkt), mkt1$col_name)
+
+strwb_survey_mkt <- strwb_survey_mkt |> select(all_of(mkt1))
 ```
